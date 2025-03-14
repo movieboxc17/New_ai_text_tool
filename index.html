@@ -4,12 +4,225 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Text Summarizer</title>
-    <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- TensorFlow.js -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
     <!-- Universal Sentence Encoder -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/universal-sentence-encoder@1.3.3/dist/universal-sentence-encoder.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #4a6fa5;
+            --secondary-color: #166088;
+            --accent-color: #4fc3f7;
+            --background-color: #f5f7fa;
+            --text-color: #333;
+            --light-gray: #e0e0e0;
+            --dark-gray: #757575;
+            --success-color: #66bb6a;
+            --error-color: #ef5350;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --border-radius: 8px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        header h1 {
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+            font-size: 2.5rem;
+        }
+
+        header p {
+            color: var(--dark-gray);
+            font-size: 1.1rem;
+        }
+
+        main {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .input-section, .output-section {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            box-shadow: var(--box-shadow);
+        }
+
+        h2 {
+            color: var(--secondary-color);
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        textarea {
+            width: 100%;
+            height: 300px;
+            padding: 1rem;
+            border: 1px solid var(--light-gray);
+            border-radius: var(--border-radius);
+            font-family: inherit;
+            font-size: 1rem;
+            resize: none;
+            margin-bottom: 0.5rem;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.2);
+        }
+
+        .char-count {
+            text-align: right;
+            color: var(--dark-gray);
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .summary-length {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .summary-length label {
+            color: var(--dark-gray);
+            font-size: 0.9rem;
+        }
+
+        .summary-length select {
+            padding: 0.5rem;
+            border: 1px solid var(--light-gray);
+            border-radius: var(--border-radius);
+            background-color: white;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        button:disabled {
+            background-color: var(--light-gray);
+            cursor: not-allowed;
+        }
+
+        #copy-btn {
+            background-color: var(--success-color);
+            margin-top: 1rem;
+        }
+
+        #copy-btn:hover {
+            background-color: #43a047;
+        }
+
+        .output-box {
+            min-height: 300px;
+            padding: 1rem;
+            border: 1px solid var(--light-gray);
+            border-radius: var(--border-radius);
+            background-color: #fafafa;
+            white-space: pre-wrap;
+            overflow-y: auto;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 300px;
+        }
+
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid var(--accent-color);
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        .model-status {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: var(--dark-gray);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        footer {
+            margin-top: 3rem;
+            text-align: center;
+            color: var(--dark-gray);
+            font-size: 0.9rem;
+        }
+
+        footer p {
+            margin-bottom: 0.5rem;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -55,6 +268,245 @@
         </footer>
     </div>
 
-    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM Elements
+            const inputText = document.getElementById('input-text');
+            const charCount = document.getElementById('char-count');
+            const summarizeBtn = document.getElementById('summarize-btn');
+            const outputText = document.getElementById('output-text');
+            const copyBtn = document.getElementById('copy-btn');
+            const loading = document.getElementById('loading');
+            const modelStatus = document.querySelector('.model-status');
+            const summaryLengthSelect = document.getElementById('summary-length');
+
+            // Global variables
+            let model = null;
+            let isModelLoading = false;
+
+            // Load the Universal Sentence Encoder model
+            async function loadModel() {
+                if (model !== null) return model;
+                if (isModelLoading) return null;
+
+                isModelLoading = true;
+                modelStatus.textContent = 'Loading AI model...';
+                
+                try {
+                    model = await use.load();
+                    modelStatus.textContent = 'AI model loaded successfully!';
+                    return model;
+                } catch (error) {
+                    console.error('Error loading model:', error);
+                    modelStatus.textContent = 'Error loading AI model. Please refresh the page.';
+                    throw error;
+                } finally {
+                    isModelLoading = false;
+                }
+            }
+
+            // Start loading the model when the page loads
+            loadModel().catch(console.error);
+
+            // Update character count and enable/disable summarize button
+            inputText.addEventListener('input', () => {
+                const text = inputText.value;
+                charCount.textContent = text.length;
+                
+                // Enable button if text is at least 100 characters
+                if (text.length >= 100) {
+                    summarizeBtn.disabled = false;
+                } else {
+                    summarizeBtn.disabled = true;
+                }
+            });
+
+            // Summarize text when button is clicked
+            summarizeBtn.addEventListener('click', async () => {
+                const text = inputText.value.trim();
+                
+                if (text.length < 100) {
+                    alert('Please enter at least 100 characters to summarize.');
+                    return;
+                }
+                
+                // Show loading spinner
+                loading.classList.remove('hidden');
+                outputText.classList.add('hidden');
+                copyBtn.classList.add('hidden');
+                
+                try {
+                    // Make sure model is loaded
+                    if (model === null) {
+                        model = await loadModel();
+                    }
+                    
+                    const summaryRatio = parseFloat(summaryLengthSelect.value);
+                    const summary = await generateSummary(text, summaryRatio);
+                    outputText.textContent = summary;
+                    copyBtn.classList.remove('hidden');
+                } catch (error) {
+                    outputText.textContent = `Error: ${error.message}`;
+                    console.error('Summarization error:', error);
+                } finally {
+                    // Hide loading spinner and show output
+                    loading.classList.add('hidden');
+                    outputText.classList.remove('hidden');
+                }
+            });
+
+            // Copy summary to clipboard
+            copyBtn.addEventListener('click', () => {
+                const summaryText = outputText.textContent;
+                navigator.clipboard.writeText(summaryText)
+                    .then(() => {
+                        const originalText = copyBtn.innerHTML;
+                        copyBtn.innerHTML = 'Copied! <i class="fas fa-check"></i>';
+                        
+                        setTimeout(() => {
+                            copyBtn.innerHTML = originalText;
+                        }, 2000);
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy text: ', err);
+                        alert('Failed to copy text to clipboard');
+                    });
+            });
+
+            // Function to generate summary using TensorFlow.js
+            async function generateSummary(text, summaryRatio = 0.3) {
+                // Split text into sentences
+                const sentences = splitIntoSentences(text);
+                
+                if (sentences.length <= 3) {
+                    return text; // Return original text if it's too short
+                }
+
+                // Get sentence embeddings using Universal Sentence Encoder
+                const embeddings = await model.embed(sentences);
+                
+                // Convert to 2D array
+                const embeddingsArray = await embeddings.array();
+                
+                // Calculate similarity matrix
+                const similarityMatrix = calculateSimilarityMatrix(embeddingsArray);
+                
+                // Calculate sentence scores using TextRank algorithm
+                const scores = textRank(similarityMatrix, 0.85, 30);
+                
+                // Determine how many sentences to include in the summary
+                const numSentencesToInclude = Math.max(3, Math.ceil(sentences.length * summaryRatio));
+                
+                // Get indices of top sentences
+                const topIndices = getTopIndices(scores, numSentencesToInclude);
+                
+                // Sort indices to maintain original order
+                topIndices.sort((a, b) => a - b);
+                
+                // Construct summary from top sentences
+                const summary = topIndices.map(index => sentences[index]).join(' ');
+                
+                return summary;
+            }
+
+            // Helper function to split text into sentences
+            function splitIntoSentences(text) {
+                // More robust sentence splitting
+                text = text.replace(/([.?!])\s*(?=[A-Z])/g, "$1|").split("|");
+                return text.filter(s => s.trim().length > 0);
+            }
+
+            // Calculate cosine similarity between two vectors
+            function cosineSimilarity(vecA, vecB) {
+                let dotProduct = 0;
+                let normA = 0;
+                let normB = 0;
+                
+                for (let i = 0; i < vecA.length; i++) {
+                    dotProduct += vecA[i] * vecB[i];
+                    normA += vecA[i] * vecA[i];
+                    normB += vecB[i] * vecB[i];
+                }
+                
+                normA = Math.sqrt(normA);
+                normB = Math.sqrt(normB);
+                
+                if (normA === 0 || normB === 0) {
+                    return 0;
+                }
+                
+                return dotProduct / (normA * normB);
+            }
+
+            // Calculate similarity matrix for all sentences
+                function calculateSimilarityMatrix(embeddings) {
+                    const numSentences = embeddings.length;
+                    const similarityMatrix = Array(numSentences).fill().map(() => Array(numSentences).fill(0));
+                    
+                    for (let i = 0; i < numSentences; i++) {
+                        for (let j = 0; j < numSentences; j++) {
+                            if (i === j) {
+                                similarityMatrix[i][j] = 1; // Same sentence has perfect similarity
+                            } else {
+                                const similarity = cosineSimilarity(embeddings[i], embeddings[j]);
+                                similarityMatrix[i][j] = similarity;
+                            }
+                        }
+                    }
+                    
+                    return similarityMatrix;
+                }
+
+                // TextRank algorithm implementation
+                function textRank(similarityMatrix, dampingFactor = 0.85, iterations = 30) {
+                    const numSentences = similarityMatrix.length;
+                    
+                    // Initialize scores
+                    let scores = Array(numSentences).fill(1 / numSentences);
+                    
+                    // Iterate to convergence
+                    for (let iter = 0; iter < iterations; iter++) {
+                        const newScores = Array(numSentences).fill(0);
+                        
+                        for (let i = 0; i < numSentences; i++) {
+                            // Random jump probability
+                            newScores[i] = (1 - dampingFactor) / numSentences;
+                            
+                            // Add contributions from other sentences
+                            for (let j = 0; j < numSentences; j++) {
+                                if (i !== j) {
+                                    // Get outgoing link sum for sentence j
+                                    let outgoingSum = 0;
+                                    for (let k = 0; k < numSentences; k++) {
+                                        if (j !== k) {
+                                            outgoingSum += similarityMatrix[j][k];
+                                        }
+                                    }
+                                    
+                                    // Add contribution if there are outgoing links
+                                    if (outgoingSum > 0) {
+                                        newScores[i] += dampingFactor * scores[j] * similarityMatrix[j][i] / outgoingSum;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Update scores
+                        scores = newScores;
+                    }
+                    
+                    return scores;
+                }
+
+                // Get indices of top N scores
+                function getTopIndices(scores, n) {
+                    return scores
+                        .map((score, index) => ({ score, index }))
+                        .sort((a, b) => b.score - a.score)
+                        .slice(0, n)
+                        .map(item => item.index);
+                }
+            });
+        </script>
 </body>
 </html>
